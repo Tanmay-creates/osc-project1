@@ -1,0 +1,10 @@
+{
+  "name": "osc-project1",
+  "private": true,
+  "description": "TaskFlow root scripts",
+  "scripts": {
+    "dev": "npm --prefix TaskFlow-React-Frontend run dev",
+    "build": "npm --prefix TaskFlow-React-Frontend run build",
+    "preview": "npm --prefix TaskFlow-React-Frontend run preview"
+  }
+}
