@@ -49,7 +49,8 @@ export default function SettingsView({
       const blob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const dateStr = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       link.href = url;
       link.download = `taskflow-export-${dateStr}.json`;
       document.body.appendChild(link);

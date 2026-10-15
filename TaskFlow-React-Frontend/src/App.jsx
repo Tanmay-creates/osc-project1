@@ -11,13 +11,20 @@ import SettingsView from "./SettingsView";
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const STORAGE_KEY = "taskflow_tasks_v1";
 
-const todayIso = new Date().toISOString().split("T")[0];
+function toLocalDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const todayIso = toLocalDateString(new Date());
 const tomorrowObj = new Date();
 tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-const tomorrowIso = tomorrowObj.toISOString().split("T")[0];
+const tomorrowIso = toLocalDateString(tomorrowObj);
 const inThreeDaysObj = new Date();
 inThreeDaysObj.setDate(inThreeDaysObj.getDate() + 3);
-const inThreeDaysIso = inThreeDaysObj.toISOString().split("T")[0];
+const inThreeDaysIso = toLocalDateString(inThreeDaysObj);
 
 const starterTasks = [
   { id: "demo-1", title: "Review project requirements", completed: false, priority: "High", due_date: todayIso, created_at: new Date().toISOString() },
@@ -374,13 +381,14 @@ function App() {
         await apiRequest(`/tasks/${task.id}`, { method: "DELETE" });
         setTasks((current) => current.filter((item) => item.id !== task.id));
         setApiError("");
+        showNotice("Task deleted");
       } catch (error) {
         setApiError(`Could not delete task: ${error.message}`);
       }
     } else {
       setTasks((current) => current.filter((item) => item.id !== task.id));
+      showNotice("Task deleted");
     }
-    showNotice("Task deleted");
   }
 
   // Settings Actions
@@ -640,40 +648,76 @@ function App() {
           </div>
         ) : (
           <div className="page-wrap">
-            <section className="welcome-row">
-              <div>
-                <div className="eyebrow"><span className="eyebrow-dot" /> YOUR PERSONAL WORKSPACE</div>
-                <h1>Make today <span>count.</span></h1>
-                <p className="welcome-subtitle">Small steps, big momentum. Here's what's on your plate.</p>
-              </div>
-              <div className="date-chip"><CalendarDays size={16} /> {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
-            </section>
+            {filter === "Open" ? (
+              <section className="view-hero open-hero">
+                <div className="view-hero-content">
+                  <div className="view-hero-badge"><Clock3 size={22} /></div>
+                  <div>
+                    <h1>Focus Mode<span>.</span></h1>
+                    <p className="view-hero-sub">{openCount} task{openCount !== 1 ? "s" : ""} waiting for your attention. One step at a time.</p>
+                  </div>
+                </div>
+                <div className="open-priority-summary">
+                  <span className="priority-chip high-chip"><Zap size={12} /> {visibleTasks.filter(t => t.priority === "High").length} High</span>
+                  <span className="priority-chip medium-chip">{visibleTasks.filter(t => t.priority === "Medium").length} Medium</span>
+                  <span className="priority-chip low-chip">{visibleTasks.filter(t => t.priority === "Low").length} Low</span>
+                </div>
+              </section>
+            ) : filter === "Done" ? (
+              <section className="view-hero done-hero">
+                <div className="view-hero-content">
+                  <div className="view-hero-badge"><CheckCheck size={22} /></div>
+                  <div>
+                    <h1>Completed<span>.</span></h1>
+                    <p className="view-hero-sub">You've conquered {completedCount} task{completedCount !== 1 ? "s" : ""}. That's {progress}% of your total!</p>
+                  </div>
+                </div>
+                <div className="done-stats-row">
+                  <div className="done-stat"><strong>{completedCount}</strong><span>Done</span></div>
+                  <div className="done-stat-divider" />
+                  <div className="done-stat"><strong>{progress}%</strong><span>Rate</span></div>
+                  <div className="done-stat-divider" />
+                  <div className="done-stat"><strong>{tasks.length}</strong><span>Total</span></div>
+                </div>
+              </section>
+            ) : (
+              <section className="welcome-row">
+                <div>
+                  <div className="eyebrow"><span className="eyebrow-dot" /> YOUR PERSONAL WORKSPACE</div>
+                  <h1>Make today <span>count.</span></h1>
+                  <p className="welcome-subtitle">Small steps, big momentum. Here's what's on your plate.</p>
+                </div>
+                <div className="date-chip"><CalendarDays size={16} /> {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
+              </section>
+            )}
 
             {apiError && <div className="api-error"><Activity size={17} /><span>{apiError}</span><button onClick={() => setApiError("")} aria-label="Dismiss error"><X size={16} /></button></div>}
 
+            {filter !== "Open" && filter !== "Done" && (
             <section className="stats-grid" aria-label="Task summary">
               <div className="stat-card stat-total">
-                <div className="stat-top"><span className="stat-icon purple"><ListTodo size={18} /></span><span className="stat-label">Total tasks</span><MoreHorizontal size={18} className="stat-more" /></div>
+                <div className="stat-top"><span className="stat-icon purple"><ListTodo size={18} /></span><span className="stat-label">Total tasks</span></div>
                 <div className="stat-number">{tasks.length}<span className="stat-unit"> tasks</span></div>
                 <div className="stat-bottom"><span className="stat-note">Everything in one place</span><span className="stat-trend"><ArrowUpRight size={14} /> All time</span></div>
               </div>
               <div className="stat-card">
-                <div className="stat-top"><span className="stat-icon orange"><Clock3 size={18} /></span><span className="stat-label">Still to do</span><MoreHorizontal size={18} className="stat-more" /></div>
+                <div className="stat-top"><span className="stat-icon orange"><Clock3 size={18} /></span><span className="stat-label">Still to do</span></div>
                 <div className="stat-number">{openCount}<span className="stat-unit"> tasks</span></div>
                 <div className="stat-bottom"><span className="stat-note">One thing at a time</span><span className="mini-pill open-pill">Open</span></div>
               </div>
               <div className="stat-card">
-                <div className="stat-top"><span className="stat-icon green"><CheckCheck size={18} /></span><span className="stat-label">Completed</span><MoreHorizontal size={18} className="stat-more" /></div>
+                <div className="stat-top"><span className="stat-icon green"><CheckCheck size={18} /></span><span className="stat-label">Completed</span></div>
                 <div className="stat-number">{completedCount}<span className="stat-unit"> tasks</span></div>
                 <div className="stat-bottom"><span className="stat-note">Look at you go!</span><span className="mini-pill done-pill">{progress}% done</span></div>
               </div>
             </section>
+            )}
 
             <section className="tasks-section">
               <div className="section-heading">
                 <div>
-                  <div className="section-title-row"><h2>Your tasks</h2><span className="task-count">{visibleTasks.length}</span></div>
-                  <p>Keep your focus on what matters most.</p>
+                  <div className="section-title-row"><h2>{filter === "Open" ? "Tasks to complete" : filter === "Done" ? "Finished tasks" : "Your tasks"}</h2><span className="task-count">{visibleTasks.length}</span></div>
+                  <p>{filter === "Open" ? "Focus on the next one — you're making progress." : filter === "Done" ? "Every completed task is a win. Here's your track record." : "Keep your focus on what matters most."}</p>
                 </div>
                 <div className="section-actions">
                   <button className="filter-button" onClick={() => setMenuOpen((value) => !value)}><Filter size={16} /> Filter <ChevronDown size={15} /></button>
@@ -751,11 +795,13 @@ function App() {
               <div className="list-footer"><span>Showing <strong>{visibleTasks.length}</strong> of <strong>{tasks.length}</strong> tasks</span><span className="footer-sync"><span className="sync-dot" /> {API_URL ? "API mode" : "Saved in this browser"}</span></div>
             </section>
 
-            <section className="focus-banner">
-              <div className="focus-art"><div className="focus-art-circle"><Zap size={22} fill="currentColor" /></div><span className="sparkle sparkle-one">✦</span><span className="sparkle sparkle-two">✧</span></div>
-              <div className="focus-copy"><strong>Progress over perfection.</strong><span>You've got this. Focus on the next small step, not the whole staircase.</span></div>
-              <button onClick={() => { setFilter("Open"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="focus-link">Focus on open tasks <ArrowUpRight size={16} /></button>
-            </section>
+            {filter !== "Open" && filter !== "Done" && (
+              <section className="focus-banner">
+                <div className="focus-art"><div className="focus-art-circle"><Zap size={22} fill="currentColor" /></div><span className="sparkle sparkle-one">✦</span><span className="sparkle sparkle-two">✧</span></div>
+                <div className="focus-copy"><strong>Progress over perfection.</strong><span>You've got this. Focus on the next small step, not the whole staircase.</span></div>
+                <button onClick={() => { setFilter("Open"); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="focus-link">Focus on open tasks <ArrowUpRight size={16} /></button>
+              </section>
+            )}
 
             <footer className="page-footer"><span>© 2026 TaskFlow</span><span><CircleHelp size={14} /> Made for a more focused day</span></footer>
           </div>
